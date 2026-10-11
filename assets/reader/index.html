@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <meta name="theme-color" content="#8ed4fa" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <title>互动点读绘本</title>
+    <link rel="stylesheet" href="reader.css?v=5" />
+    <script src="playback-utils.js?v=5" defer></script>
+    <script src="reader.js?v=5" defer></script>
+  </head>
+  <body>
+    <div class="reader-shell" id="reader-shell" data-theme="storybook">
+      <div class="scene-backdrop" aria-hidden="true">
+        <picture id="theme-picture">
+          <source id="theme-art-portrait" media="(max-width: 920px) and (orientation: portrait)" />
+          <img id="theme-art" src="themes/backgrounds/default-landscape.webp" alt="" />
+        </picture>
+      </div>
+
+      <header class="topbar">
+        <button class="icon-button back-button" id="contents-button" type="button" aria-label="回到封面">‹</button>
+        <div class="title-area">
+          <h1 id="book-title">互动绘本</h1>
+        </div>
+        <div class="topbar-actions" aria-label="绘本设置和整本朗读">
+          <button class="topbar-button theme-picker-trigger" id="theme-button" type="button" aria-label="选择阅读场景，当前为故事花园" title="选择阅读场景">
+            <img class="theme-current-icon" id="theme-current-icon" src="themes/icons/storybook.svg" alt="" />
+            <span class="theme-current-name" id="theme-current-name">故事花园</span>
+          </button>
+          <span class="page-indicator" id="page-status" aria-live="polite">正在打开…</span>
+          <select class="topbar-select book-playback-mode" id="book-playback-mode" aria-label="整本朗读范围">
+            <option value="en">整本英</option>
+            <option value="zh">整本中</option>
+            <option value="bilingual">逐页英中</option>
+          </select>
+          <button class="topbar-button book-play-button" id="read-book" type="button" aria-label="按所选范围朗读整本">整本读</button>
+          <button class="topbar-button stop-button" id="stop-playback" type="button" disabled aria-label="停止朗读">■</button>
+        </div>
+      </header>
+
+      <main class="reader-main" id="reader-main" aria-label="绘本阅读区">
+        <div class="book-stage" id="book-stage">
+          <div class="book-spread" id="book-spread" aria-label="打开的绘本">
+            <article class="book-page page-left" id="page-slot-left" aria-label="左侧书页">
+              <img class="page-image" id="page-image-left" alt="" draggable="false" />
+              <div class="hotspot-layer" id="hotspot-layer-left" aria-label="左页英文点读区"></div>
+            </article>
+            <div class="book-gutter" id="book-gutter" aria-hidden="true"></div>
+            <article class="book-page page-right" id="page-slot-right" aria-label="右侧书页">
+              <img class="page-image" id="page-image-right" alt="" draggable="false" />
+              <div class="hotspot-layer" id="hotspot-layer-right" aria-label="右页英文点读区"></div>
+            </article>
+          </div>
+        </div>
+      </main>
+
+      <section class="reading-dock" aria-label="朗读与点读信息">
+        <button class="page-turn-button" id="previous-page" type="button" aria-label="上一页" disabled>‹</button>
+        <div class="dock-content">
+          <div class="dock-controls" aria-label="朗读控制">
+            <div class="sentence-controls" aria-label="逐句朗读控制">
+              <button class="small-control" id="previous-sentence" type="button" aria-label="上一句">‹</button>
+              <button class="play-button" id="play-sentence" type="button" aria-label="朗读当前句">▶</button>
+              <button class="small-control" id="next-sentence" type="button" aria-label="下一句">›</button>
+            </div>
+            <div class="page-controls" aria-label="本页朗读控制">
+              <button class="language-control" id="read-page-en" type="button" aria-label="朗读本页英语" title="朗读本页英语">本页英</button>
+              <button class="language-control" id="read-page-zh" type="button" aria-label="朗读本页中文" title="朗读本页中文">本页中</button>
+              <button class="language-control" id="read-page-bilingual" type="button" aria-label="先读本页英语，再读本页中文" title="先读本页英语，再读本页中文">本页英中</button>
+              <label class="rate-control" for="playback-rate"><span aria-hidden="true">🐢</span>
+                <select id="playback-rate" aria-label="朗读语速" title="朗读语速">
+                  <option value="0.75">0.75×</option>
+                  <option value="0.8">0.8×</option>
+                  <option value="0.85">0.85×</option>
+                  <option value="0.9">0.9×</option>
+                  <option value="0.95">0.95×</option>
+                  <option value="1" selected>1.0×</option>
+                  <option value="1.05">1.05×</option>
+                  <option value="1.1">1.1×</option>
+                  <option value="1.15">1.15×</option>
+                  <option value="1.2">1.2×</option>
+                  <option value="1.25">1.25×</option>
+                </select>
+              </label>
+            </div>
+          </div>
+          <div class="dock-reading">
+            <p class="active-english" id="active-english" aria-label="当前英文句子"></p>
+            <p class="active-chinese" id="active-chinese" aria-live="polite">点击英文单词，听读并查看词义</p>
+            <div class="audio-progress-row">
+              <div class="progress-track" aria-hidden="true"><span id="progress-fill"></span></div>
+              <span id="audio-time">—</span>
+              <span class="page-count" id="progress-text">— / —</span>
+            </div>
+            <p class="playback-status" id="playback-status" role="status" aria-live="polite"></p>
+          </div>
+          <div class="word-lookup" id="word-lookup" role="status" aria-live="polite" hidden>
+            <span class="word-lookup-label">这个词</span>
+            <strong id="meaning-word"></strong>
+            <span id="meaning-zh"></span>
+            <button class="meaning-close" id="close-meaning" type="button" aria-label="关闭词义">×</button>
+          </div>
+          <div class="word-prompt" id="word-prompt">点一点书上的英文</div>
+        </div>
+        <button class="page-turn-button next" id="next-page" type="button" aria-label="下一页">›</button>
+      </section>
+    </div>
+
+    <dialog class="theme-dialog" id="theme-dialog" aria-labelledby="theme-dialog-title">
+      <div class="theme-dialog-heading">
+        <div>
+          <h2 id="theme-dialog-title">选择绘本舞台</h2>
+          <p>挑一个喜欢的场景，陪故事一起翻页</p>
+        </div>
+        <button class="theme-dialog-close" id="close-theme-dialog" type="button" aria-label="关闭场景选择">×</button>
+      </div>
+      <div class="theme-choice-grid" role="group" aria-label="阅读场景">
+        <button class="theme-choice" type="button" data-theme-mode="default" aria-pressed="false"><img src="themes/icons/default.svg" alt="" /><span>柔彩舞台</span></button>
+        <button class="theme-choice" type="button" data-theme-mode="storybook" aria-pressed="false"><img src="themes/icons/storybook.svg" alt="" /><span>故事花园</span></button>
+        <button class="theme-choice" type="button" data-theme-mode="winter" aria-pressed="false"><img src="themes/icons/winter.svg" alt="" /><span>冬日雪原</span></button>
+        <button class="theme-choice" type="button" data-theme-mode="vehicles" aria-pressed="false"><img src="themes/icons/vehicles.svg" alt="" /><span>交通小镇</span></button>
+        <button class="theme-choice" type="button" data-theme-mode="construction" aria-pressed="false"><img src="themes/icons/construction.svg" alt="" /><span>工程工地</span></button>
+        <button class="theme-choice" type="button" data-theme-mode="ocean" aria-pressed="false"><img src="themes/icons/ocean.svg" alt="" /><span>海底世界</span></button>
+        <button class="theme-choice" type="button" data-theme-mode="forest" aria-pressed="false"><img src="themes/icons/forest.svg" alt="" /><span>森林漫步</span></button>
+        <button class="theme-choice" type="button" data-theme-mode="farm" aria-pressed="false"><img src="themes/icons/farm.svg" alt="" /><span>田园农场</span></button>
+        <button class="theme-choice" type="button" data-theme-mode="space" aria-pressed="false"><img src="themes/icons/space.svg" alt="" /><span>星际探险</span></button>
+        <button class="theme-choice book-theme-choice" id="book-theme-choice" type="button" data-theme-mode="book" aria-pressed="false" hidden><img src="themes/icons/book.svg" alt="" /><span>本书专属背景</span></button>
+      </div>
+      <p class="theme-menu-note" id="theme-menu-note">已按整本绘本主题预选场景，也可以随时切换。</p>
+    </dialog>
+
+    <div class="fatal-error" id="fatal-error" role="alert" hidden>
+      <h1>绘本暂时打不开</h1>
+      <p id="fatal-message">请确认文件夹通过 HTTP 服务打开，且 book.json 和本地资源都在同一目录中。</p>
+    </div>
+  </body>
+</html>
