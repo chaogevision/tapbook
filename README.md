@@ -6,7 +6,9 @@
 
 **A reusable Skill for turning picture-book PDFs into interactive, read-along books.**
 
-<img src="assets/reader/themes/backgrounds/storybook-landscape.webp" alt="TapBook storybook theme preview" width="900">
+<img src="examples/monsters-on-wheels-preview.png" alt="Monsters on Wheels interactive picture book open to pages 3–4, with a snowy reading stage and bilingual controls" width="100%">
+
+**示例绘本：** [下载完整 17 页互动样例](examples/monsters-on-wheels-interactive.zip) · [查看样例说明](examples/README.md)
 
 <p>保留原书每一页的绘画与版面，在周围搭起适合孩子阅读的绘本舞台。点单词听发音、看词义；按句朗读；整页或整本中英双语播放。</p>
 
