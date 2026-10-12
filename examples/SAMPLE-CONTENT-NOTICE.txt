@@ -1,0 +1,7 @@
+Monsters on Wheels sample content notice
+
+The original book pages, text, characters, illustrations, and related book-derived assets in this interactive sample are included only as an authorized public demonstration of TapBook.
+
+This book-derived content is excluded from the PolyForm Noncommercial License that covers TapBook's original software and project materials. No permission to reuse, adapt, or commercially distribute the book content is granted by TapBook's license. Copyright and other rights in the underlying book content remain with their respective rights holders.
+
+The TapBook reader code and original TapBook project materials remain subject to the repository's LICENSE file.
