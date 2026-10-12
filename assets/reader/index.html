@@ -10,9 +10,11 @@
     <link rel="stylesheet" href="reader.css?v=6" />
     <script src="playback-utils.js?v=5" defer></script>
     <script src="hotspot-utils.js?v=1" defer></script>
-    <script src="reader.js?v=6" defer></script>
+    <script src="book-data-utils.js?v=1" defer></script>
+    <script src="reader.js?v=7" defer></script>
   </head>
   <body>
+    <script id="embedded-book-data" type="application/json"></script>
     <div class="reader-shell" id="reader-shell" data-theme="storybook">
       <div class="scene-backdrop" aria-hidden="true">
         <picture id="theme-picture">
@@ -135,7 +137,7 @@
 
     <div class="fatal-error" id="fatal-error" role="alert" hidden>
       <h1>绘本暂时打不开</h1>
-      <p id="fatal-message">请确认文件夹通过 HTTP 服务打开，且 book.json 和本地资源都在同一目录中。</p>
+      <p id="fatal-message">请先完整解压绘本压缩包，再双击打开 index.html。</p>
     </div>
   </body>
 </html>

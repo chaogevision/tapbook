@@ -6,6 +6,7 @@ from __future__ import annotations
 import argparse
 import json
 import os
+import re
 import shutil
 import sys
 import tempfile
@@ -18,12 +19,13 @@ from validate_book import validate_book
 READER_DIR = Path(__file__).resolve().parents[1] / "assets/reader"
 THEME_DIR = READER_DIR / "themes"
 THEME_BACKGROUND_DIR = THEME_DIR / "backgrounds"
-READER_FILES = ("index.html", "reader.css", "playback-utils.js", "hotspot-utils.js", "reader.js")
+READER_FILES = ("index.html", "reader.css", "playback-utils.js", "hotspot-utils.js", "book-data-utils.js", "reader.js")
 THEME_MODES = ("default", "storybook", "winter", "vehicles", "construction", "ocean", "forest", "farm", "space")
 THEME_ORIENTATIONS = ("landscape", "portrait")
 THEME_FILES = tuple(f"{mode}-{orientation}.webp" for mode in THEME_MODES for orientation in THEME_ORIENTATIONS)
 THEME_ICON_FILES = ("default.svg", "storybook.svg", "winter.svg", "vehicles.svg", "construction.svg", "ocean.svg", "forest.svg", "farm.svg", "space.svg", "book.svg")
 MARKER_NAME = ".picturebook-generated.json"
+EMBEDDED_BOOK_TAG = '<script id="embedded-book-data" type="application/json"></script>'
 
 
 def collect_references(book: dict) -> list[str]:
@@ -52,6 +54,39 @@ def copy_relative(source_root: Path, target_root: Path, relative: str) -> None:
     source.relative_to(source_root.resolve())
     target.parent.mkdir(parents=True, exist_ok=True)
     shutil.copy2(source, target)
+
+
+def embed_book_data(index_path: Path, book: dict) -> None:
+    index_html = index_path.read_text(encoding="utf-8")
+    if index_html.count(EMBEDDED_BOOK_TAG) != 1:
+        raise ValueError("reader index must contain exactly one embedded-book-data script")
+    serialized = json.dumps(book, ensure_ascii=False, separators=(",", ":"), allow_nan=False)
+    serialized = (
+        serialized.replace("&", "\\u0026")
+        .replace("<", "\\u003c")
+        .replace(">", "\\u003e")
+        .replace("\u2028", "\\u2028")
+        .replace("\u2029", "\\u2029")
+    )
+    embedded_tag = f'<script id="embedded-book-data" type="application/json">{serialized}</script>'
+    index_path.write_text(index_html.replace(EMBEDDED_BOOK_TAG, embedded_tag), encoding="utf-8")
+
+
+def verify_offline_package(package_dir: Path, book: dict) -> None:
+    index_html = (package_dir / "index.html").read_text(encoding="utf-8")
+    matches = re.findall(
+        r'<script id="embedded-book-data" type="application/json">([\s\S]*?)</script>',
+        index_html,
+    )
+    if len(matches) != 1 or json.loads(matches[0]) != book:
+        raise ValueError("offline package index does not contain the matching embedded book data")
+    packaged_book = json.loads((package_dir / "book.json").read_text(encoding="utf-8"))
+    if packaged_book != book:
+        raise ValueError("offline package book.json does not match the embedded book data")
+    for relative in collect_references(book):
+        asset = package_dir / Path(*PurePosixPath(relative).parts)
+        if not asset.is_file() or asset.stat().st_size == 0:
+            raise ValueError(f"offline package is missing a local book asset: {relative}")
 
 
 def zip_reproducibly(folder: Path, archive_path: Path) -> None:
@@ -128,6 +163,7 @@ def package_book(source_root: Path, output_dir: Path, archive_path: Path, replac
     try:
         for filename in READER_FILES:
             shutil.copy2(READER_DIR / filename, stage / filename)
+        embed_book_data(stage / "index.html", book)
         (stage / "themes").mkdir(parents=True, exist_ok=True)
         (stage / "themes" / "backgrounds").mkdir(parents=True, exist_ok=True)
         for filename in THEME_FILES:
@@ -139,6 +175,11 @@ def package_book(source_root: Path, output_dir: Path, archive_path: Path, replac
             copy_relative(source_root, stage, relative)
         shutil.copy2(book_path, stage / "book.json")
         shutil.copy2(source_root / "qa-report.json", stage / "qa-report.json")
+        verify_offline_package(stage, book)
+        qa_report_path = stage / "qa-report.json"
+        qa_report = json.loads(qa_report_path.read_text(encoding="utf-8"))
+        qa_report.setdefault("checks", {})["offlinePackage"] = True
+        qa_report_path.write_text(json.dumps(qa_report, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         marker = {"generatedBy": "tapbook", "schemaVersion": 1, "title": book["title"]}
         (stage / MARKER_NAME).write_text(json.dumps(marker, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
         zip_reproducibly(stage, archive_stage)

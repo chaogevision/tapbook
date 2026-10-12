@@ -353,11 +353,21 @@ test('packager writes a portable reader directory and ZIP without absolute paths
     assert.equal(result.status, 0, result.stderr);
     result = runPython('validate_book.py', [path.join(fx.work, 'book.json'), '--root', fx.work], fx);
     assert.equal(result.status, 0, result.stderr);
+    const sourceBookPath = path.join(fx.work, 'book.json');
+    const sourceBook = JSON.parse(readFileSync(sourceBookPath, 'utf8'));
+    sourceBook.title = 'A </script><script>bad()</script> story';
+    writeFileSync(sourceBookPath, JSON.stringify(sourceBook, null, 2));
     const output = path.join(fx.root, 'published');
     const archive = path.join(fx.root, 'published.zip');
     result = runPython('package_book.py', [fx.work, '--output-dir', output, '--zip', archive], fx);
     assert.equal(result.status, 0, result.stdout + result.stderr);
-    assert.ok(readFileSync(path.join(output, 'index.html'), 'utf8').includes('reader.js'));
+    const packagedIndex = readFileSync(path.join(output, 'index.html'), 'utf8');
+    assert.ok(packagedIndex.includes('reader.js'));
+    const embeddedMatch = packagedIndex.match(/<script id="embedded-book-data" type="application\/json">([\s\S]*?)<\/script>/);
+    assert.ok(embeddedMatch, 'the generated index must embed its book data for file:// use');
+    assert.equal(JSON.parse(embeddedMatch[1]).title, sourceBook.title);
+    assert.doesNotMatch(packagedIndex, /<\/script><script>bad\(\)<\/script>/);
+    assert.ok(statSync(path.join(output, 'book.json')).size > 0, 'keep book.json for HTTP compatibility');
     assert.ok(readFileSync(path.join(output, 'assets/page-001.jpg'), 'utf8').length > 0);
     assert.ok(readFileSync(path.join(output, 'assets/reader-background.jpg'), 'utf8').length > 0);
     assert.ok(readFileSync(path.join(output, 'assets/reader-background-portrait.jpg'), 'utf8').length > 0);
@@ -367,10 +377,14 @@ test('packager writes a portable reader directory and ZIP without absolute paths
     assert.ok(readFileSync(path.join(output, 'playback-utils.js'), 'utf8').includes('buildQueue'));
     assert.ok(statSync(path.join(output, 'themes/backgrounds/default-landscape.webp')).size > 0);
     assert.ok(statSync(path.join(output, 'themes/backgrounds/default-portrait.webp')).size > 0);
+    const packagedQa = JSON.parse(readFileSync(path.join(output, 'qa-report.json'), 'utf8'));
+    assert.equal(packagedQa.checks.offlinePackage, true, 'the package QA report must record that embedded data and all local assets are present');
     assert.match(readFileSync(path.join(output, 'reader.js'), 'utf8'), /theme-dialog/);
+    assert.match(readFileSync(path.join(output, 'reader.js'), 'utf8'), /window\.location\.protocol === 'file:'/);
     assert.match(readFileSync(path.join(output, 'index.html'), 'utf8'), /read-page-bilingual/);
     assert.match(readFileSync(path.join(output, 'index.html'), 'utf8'), /hotspot-utils\.js/);
     assert.ok(readFileSync(path.join(output, 'hotspot-utils.js'), 'utf8').includes('nearestAtPoint'));
+    assert.ok(readFileSync(path.join(output, 'book-data-utils.js'), 'utf8').includes('loadBookData'));
     assert.match(readFileSync(path.join(output, 'index.html'), 'utf8'), /playback-rate/);
     assert.match(readFileSync(path.join(output, 'index.html'), 'utf8'), /逐页英中/);
     const list = spawnSync(python, ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); print("\\n".join(z.namelist()))', archive], { encoding: 'utf8' });
@@ -384,6 +398,7 @@ test('packager writes a portable reader directory and ZIP without absolute paths
     assert.doesNotMatch(list.stdout, /themes\/(winter|vehicles|construction|ocean|forest|farm|space|storybook)\.svg/);
     assert.match(list.stdout, /playback-utils\.js/);
     assert.match(list.stdout, /hotspot-utils\.js/);
+    assert.match(list.stdout, /book-data-utils\.js/);
     assert.match(list.stdout, /themes\/backgrounds\/default-landscape\.webp/);
     assert.match(list.stdout, /themes\/backgrounds\/default-portrait\.webp/);
     assert.match(list.stdout, /assets\/reader-background\.jpg/);
@@ -396,6 +411,7 @@ test('packager writes a portable reader directory and ZIP without absolute paths
     assert.equal(result.status, 0, result.stdout + result.stderr);
     assert.ok(!readdirSync(output).includes('stale-generated-file.txt'));
     assert.ok(readFileSync(path.join(output, 'index.html'), 'utf8').includes('reader.js'));
+    assert.match(readFileSync(path.join(output, 'index.html'), 'utf8'), /<script id="embedded-book-data" type="application\/json">/);
   } finally {
     rmSync(fx.root, { recursive: true, force: true });
   }

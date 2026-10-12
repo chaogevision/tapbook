@@ -2,6 +2,7 @@
 
 const $ = (id) => document.getElementById(id);
 const THEMES = new Set(['winter', 'vehicles', 'construction', 'ocean', 'forest', 'farm', 'space', 'storybook']);
+const BookData = globalThis.PictureBookData;
 const THEME_LABELS = Object.freeze({
   default: '柔彩舞台', storybook: '故事花园', winter: '冬日雪原', vehicles: '交通小镇',
   construction: '工程工地', ocean: '海底世界', forest: '森林漫步', farm: '田园农场', space: '星际探险', book: '本书专属背景',
@@ -733,17 +734,25 @@ async function start() {
   bindControls();
   setPlaybackRate(savedPlaybackRate(), false);
   try {
-    const response = await fetch('./book.json', { cache: 'no-store' });
-    if (!response.ok) throw new Error(`book.json returned ${response.status}`);
-    const book = await response.json();
-    if (!Array.isArray(book.pages) || !book.pages.length) throw new Error('book.json has no pages');
+    const book = await BookData.loadBookData({
+      embeddedText: $('embedded-book-data')?.textContent || '',
+      protocol: window.location.protocol,
+    });
     state.book = book;
     applyTheme(book);
     document.title = `${book.title} · 互动绘本`;
     $('reader-shell').setAttribute('aria-label', `${book.title}互动绘本`);
     renderPage();
   } catch (error) {
-    reportFatal(`无法载入绘本数据：${error.message}。请通过 HTTP 服务打开包含 book.json 的静态目录。`);
+    const detail = error instanceof Error ? error.message : String(error);
+    if (window.location.protocol === 'file:') {
+      const recovery = detail.includes('请完整解压')
+        ? ''
+        : '请完整解压压缩包后，双击根目录 index.html；如仍失败，请使用新版 TapBook 重新打包。';
+      reportFatal(`无法载入绘本数据：${detail}${recovery ? `。${recovery}` : ''}`);
+      return;
+    }
+    reportFatal(`无法载入绘本数据：${detail}。请通过 HTTP 服务打开包含 book.json 的静态目录。`);
   }
 }
 

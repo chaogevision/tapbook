@@ -43,6 +43,8 @@
 - [ ] Required MP3s are non-empty, playable, and match the requested text and voice settings.
 - [ ] The reader does not start browser speech as a fallback.
 - [ ] All images, scripts, styles, and audio resolve from local relative paths.
+- [ ] The packaged `index.html` embeds the same book data as `book.json`; the reader uses it before any HTTP fallback.
+- [ ] After fully extracting the ZIP, `index.html` opens with the `file://` protocol; page art, theme backgrounds, and word audio load without an HTTP service. Do not test by opening the file from inside the ZIP preview.
 - [ ] The ZIP excludes the original PDF and includes only the rendered pages and generated book assets.
 - [ ] `qa-report.json` says `passed` and contains no blocking errors.
 - [ ] Review `touchTargetAudit` and any `small_printed_word_boxes` warnings; confirm short printed boxes are covered by the reader's expanded touch targets.
