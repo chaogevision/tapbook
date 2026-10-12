@@ -16,3 +16,5 @@
 3. 在浏览器访问 `http://localhost:8000/`。
 
 样例已经包含页面图片、阅读器代码和生成好的本地朗读音频。它不需要 TTS 后端；生成这份样例时用到的原始 PDF 不包含在压缩包中。
+
+**内容授权：**《Monsters on Wheels》的原书页面、文字和相关绘本素材仅作为经授权公开的演示样例提供，不属于 TapBook 的 PolyForm Noncommercial 许可。请查看 [`SAMPLE-CONTENT-NOTICE.txt`](SAMPLE-CONTENT-NOTICE.txt)；TapBook 代码的非商业许可不授予原书内容的复制、改编或商业使用权。样例 ZIP 内附有 [`TAPBOOK-LICENSE.txt`](TAPBOOK-LICENSE.txt) 和 `SAMPLE-CONTENT-NOTICE.txt`，便于离线分发时区分许可范围。
