@@ -122,8 +122,16 @@ TapBook 会按照 `SKILL.md` 中的工作流处理 PDF、制作 `book.json`、�
 
 详细的处理规则见 [`SKILL.md`](SKILL.md)，主题与版式规则见 [`references/theme-and-layout-guide.md`](references/theme-and-layout-guide.md)，验收清单见 [`references/quality-checklist.md`](references/quality-checklist.md)。
 
+## 许可证
+
+TapBook 自有的软件与项目资源（包括源代码、脚本、阅读器界面、内置主题素材和技术文档）采用 [PolyForm Noncommercial 1.0.0](LICENSE)。非商业用途按许可证正文授权；商业用途不在本授权范围内。
+
+**样例绘本除外：** [`examples/monsters-on-wheels-interactive.zip`](examples/monsters-on-wheels-interactive.zip) 中的原书页面、文字和相关绘本素材仅作为经授权公开的演示样例，不包含在 TapBook 的 PolyForm 许可中，也不因此获得复制、改编或商业使用原书内容的权利。详见 [样例内容说明](examples/SAMPLE-CONTENT-NOTICE.txt)。
+
 ---
 
 ### English
 
 TapBook is an agent Skill that turns a user-provided picture-book PDF into a responsive static reader. It preserves complete source pages, analyzes the book before choosing one of nine bundled raster themes, makes English words tappable, aligns Chinese translations with sentence-level narration, and packages local Edge TTS audio with the finished book. See [`SKILL.md`](SKILL.md) for the complete workflow and requirements.
+
+The original TapBook software and project materials are licensed under the [PolyForm Noncommercial License 1.0.0](LICENSE). The source-book pages, text, and related assets in the *Monsters on Wheels* sample are excluded and remain subject to their respective rights holders' terms; the sample is provided only as an authorized public demo.
