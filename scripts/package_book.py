@@ -18,7 +18,7 @@ from validate_book import validate_book
 READER_DIR = Path(__file__).resolve().parents[1] / "assets/reader"
 THEME_DIR = READER_DIR / "themes"
 THEME_BACKGROUND_DIR = THEME_DIR / "backgrounds"
-READER_FILES = ("index.html", "reader.css", "playback-utils.js", "reader.js")
+READER_FILES = ("index.html", "reader.css", "playback-utils.js", "hotspot-utils.js", "reader.js")
 THEME_MODES = ("default", "storybook", "winter", "vehicles", "construction", "ocean", "forest", "farm", "space")
 THEME_ORIENTATIONS = ("landscape", "portrait")
 THEME_FILES = tuple(f"{mode}-{orientation}.webp" for mode in THEME_MODES for orientation in THEME_ORIENTATIONS)

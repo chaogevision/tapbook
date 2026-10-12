@@ -8,6 +8,7 @@ const THEME_LABELS = Object.freeze({
 });
 const THEME_ICON_MODES = new Set(['default', 'storybook', 'winter', 'vehicles', 'construction', 'ocean', 'forest', 'farm', 'space']);
 const Playback = globalThis.PictureBookPlayback;
+const Hotspots = globalThis.PictureBookHotspots;
 const PLAYBACK_RATE_KEY = 'picturebook-playback-rate:v1';
 const STORY_KINDS = new Set(['story', 'illustration']);
 const state = {
@@ -279,13 +280,74 @@ function addHotspots(page, layer) {
     button.style.top = `${word.box.y * 100}%`;
     button.style.width = `${word.box.w * 100}%`;
     button.style.height = `${word.box.h * 100}%`;
+    button.dataset.boxX = String(word.box.x);
+    button.dataset.boxY = String(word.box.y);
+    button.dataset.boxWidth = String(word.box.w);
+    button.dataset.boxHeight = String(word.box.h);
     button.setAttribute('aria-label', `${word.text}，${word.meaningZh}，点按朗读`);
     button.title = `${word.text} · ${word.meaningZh}`;
     button.dataset.wordIndex = String(index);
     button.dataset.pageIndex = String(page.index);
-    button.addEventListener('click', () => playWord(word, index, page));
+    const highlight = document.createElement('span');
+    highlight.className = 'word-hotspot-highlight';
+    highlight.setAttribute('aria-hidden', 'true');
+    button.append(highlight);
     layer.append(button);
   }
+}
+
+function updateHotspotTargets(slot) {
+  const frameWidth = slot.frame.clientWidth;
+  const frameHeight = slot.frame.clientHeight;
+  if (!frameWidth || !frameHeight) return;
+  for (const button of slot.hotspots.querySelectorAll('.word-hotspot')) {
+    const box = {
+      x: Number(button.dataset.boxX),
+      y: Number(button.dataset.boxY),
+      w: Number(button.dataset.boxWidth),
+      h: Number(button.dataset.boxHeight),
+    };
+    const target = Hotspots.targetRect(box, frameWidth, frameHeight);
+    if (!target) continue;
+    button.style.left = `${target.left}px`;
+    button.style.top = `${target.top}px`;
+    button.style.width = `${target.width}px`;
+    button.style.height = `${target.height}px`;
+    const highlight = button.querySelector('.word-hotspot-highlight');
+    highlight.style.left = `${target.wordLeft}px`;
+    highlight.style.top = `${target.wordTop}px`;
+    highlight.style.width = `${target.wordWidth}px`;
+    highlight.style.height = `${target.wordHeight}px`;
+  }
+}
+
+function bindHotspotLayer(layer) {
+  layer.addEventListener('click', (event) => {
+    const clicked = event.target.closest('.word-hotspot');
+    if (!clicked || !layer.contains(clicked)) return;
+
+    let selected = clicked;
+    if (event.detail !== 0 && Number.isFinite(event.clientX) && Number.isFinite(event.clientY)) {
+      const candidates = [...layer.querySelectorAll('.word-hotspot')].map((button) => {
+        const targetRect = button.getBoundingClientRect();
+        const wordRect = button.querySelector('.word-hotspot-highlight').getBoundingClientRect();
+        return {
+          button,
+          hitRect: { left: targetRect.left, top: targetRect.top, right: targetRect.right, bottom: targetRect.bottom },
+          centerX: wordRect.left + wordRect.width / 2,
+          centerY: wordRect.top + wordRect.height / 2,
+        };
+      });
+      selected = Hotspots.nearestAtPoint(candidates, event.clientX, event.clientY)?.button || clicked;
+      if (selected !== clicked) selected.focus({ preventScroll: true });
+    }
+
+    const pageIndex = Number(selected.dataset.pageIndex);
+    const wordIndex = Number(selected.dataset.wordIndex);
+    const page = state.book?.pages.find((candidate) => candidate.index === pageIndex);
+    const word = page?.words[wordIndex];
+    if (word) playWord(word, wordIndex, page);
+  });
 }
 
 function renderSlots(pages) {
@@ -326,6 +388,7 @@ function updateImageFit() {
   activeSlots.forEach((slot) => {
     slot.frame.style.width = `${Math.max(1, Math.floor(slot.image.naturalWidth * scale))}px`;
     slot.frame.style.height = `${Math.max(1, Math.floor(slot.image.naturalHeight * scale))}px`;
+    updateHotspotTargets(slot);
   });
   $('book-gutter').style.width = `${gutterWidth}px`;
 }
@@ -611,6 +674,7 @@ function changeSentence(delta) {
 }
 
 function bindControls() {
+  slots.forEach((slot) => bindHotspotLayer(slot.hotspots));
   $('previous-page').addEventListener('click', () => goToPage(navTarget(-1)));
   $('next-page').addEventListener('click', () => goToPage(navTarget(1)));
   $('contents-button').addEventListener('click', () => goToPage(0));

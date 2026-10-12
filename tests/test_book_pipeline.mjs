@@ -82,6 +82,10 @@ function makeFixture() {
     }],
   };
   writeFileSync(path.join(work, 'book.json'), JSON.stringify(book, null, 2));
+  writeFileSync(path.join(work, 'render-manifest.json'), JSON.stringify({
+    pageCount: 1,
+    pages: [{ sourcePdfPage: 1, image: 'assets/page-001.jpg', width: 2000, height: 1000 }],
+  }));
   return { root, work, fake, counter: path.join(root, 'synthesis.log') };
 }
 
@@ -192,6 +196,50 @@ test('validator reports invalid boxes, missing word meanings, and untranslated E
     assert.ok(codes.includes('missing_translation'));
     assert.ok(codes.includes('missing_word_meaning'));
     assert.ok(codes.includes('invalid_word_box'));
+    assert.equal(qa.checks.touchTargets, false);
+  } finally {
+    rmSync(fx.root, { recursive: true, force: true });
+  }
+});
+
+test('validator audits compact printed boxes at phone and tablet display widths', () => {
+  const fx = makeFixture();
+  try {
+    const generated = runPython('generate_audio.py', [
+      'build', path.join(fx.work, 'book.json'), '--root', fx.work,
+      '--voice-en', 'en-US-Test', '--voice-zh', 'zh-CN-Test',
+    ], fx);
+    assert.equal(generated.status, 0, generated.stdout + generated.stderr);
+    const result = runPython('validate_book.py', [path.join(fx.work, 'book.json'), '--root', fx.work], fx);
+    assert.equal(result.status, 0, result.stdout + result.stderr);
+    const qa = JSON.parse(readFileSync(path.join(fx.work, 'qa-report.json'), 'utf8'));
+    assert.equal(qa.checks.touchTargets, true);
+    assert.deepEqual(qa.touchTargetAudit.referenceDisplayWidths, [320, 600, 900]);
+    assert.equal(qa.touchTargetAudit.minimumCssPixels, 44);
+    assert.equal(qa.touchTargetAudit.wordCount, 5);
+    assert.deepEqual(qa.touchTargetAudit.wordsNeedingExpansion, [5, 5, 5]);
+    assert.ok(qa.warnings.some((warning) => warning.code === 'small_printed_word_boxes' && warning.page === 1));
+  } finally {
+    rmSync(fx.root, { recursive: true, force: true });
+  }
+});
+
+test('validator blocks word boxes with indistinguishable touch centers', () => {
+  const fx = makeFixture();
+  try {
+    const book = JSON.parse(readFileSync(path.join(fx.work, 'book.json'), 'utf8'));
+    book.pages[0].words[1].box = { ...book.pages[0].words[0].box };
+    writeFileSync(path.join(fx.work, 'book.json'), JSON.stringify(book, null, 2));
+    const generated = runPython('generate_audio.py', [
+      'build', path.join(fx.work, 'book.json'), '--root', fx.work,
+      '--voice-en', 'en-US-Test', '--voice-zh', 'zh-CN-Test',
+    ], fx);
+    assert.equal(generated.status, 0, generated.stdout + generated.stderr);
+    const result = runPython('validate_book.py', [path.join(fx.work, 'book.json'), '--root', fx.work], fx);
+    assert.equal(result.status, 1);
+    const qa = JSON.parse(readFileSync(path.join(fx.work, 'qa-report.json'), 'utf8'));
+    assert.ok(qa.errors.some((error) => error.code === 'ambiguous_word_hotspots' && error.page === 1));
+    assert.equal(qa.checks.touchTargets, false);
   } finally {
     rmSync(fx.root, { recursive: true, force: true });
   }
@@ -321,6 +369,8 @@ test('packager writes a portable reader directory and ZIP without absolute paths
     assert.ok(statSync(path.join(output, 'themes/backgrounds/default-portrait.webp')).size > 0);
     assert.match(readFileSync(path.join(output, 'reader.js'), 'utf8'), /theme-dialog/);
     assert.match(readFileSync(path.join(output, 'index.html'), 'utf8'), /read-page-bilingual/);
+    assert.match(readFileSync(path.join(output, 'index.html'), 'utf8'), /hotspot-utils\.js/);
+    assert.ok(readFileSync(path.join(output, 'hotspot-utils.js'), 'utf8').includes('nearestAtPoint'));
     assert.match(readFileSync(path.join(output, 'index.html'), 'utf8'), /playback-rate/);
     assert.match(readFileSync(path.join(output, 'index.html'), 'utf8'), /逐页英中/);
     const list = spawnSync(python, ['-c', 'import sys,zipfile; z=zipfile.ZipFile(sys.argv[1]); print("\\n".join(z.namelist()))', archive], { encoding: 'utf8' });
@@ -333,6 +383,7 @@ test('packager writes a portable reader directory and ZIP without absolute paths
     assert.match(list.stdout, /themes\/backgrounds\/forest-landscape\.webp/);
     assert.doesNotMatch(list.stdout, /themes\/(winter|vehicles|construction|ocean|forest|farm|space|storybook)\.svg/);
     assert.match(list.stdout, /playback-utils\.js/);
+    assert.match(list.stdout, /hotspot-utils\.js/);
     assert.match(list.stdout, /themes\/backgrounds\/default-landscape\.webp/);
     assert.match(list.stdout, /themes\/backgrounds\/default-portrait\.webp/);
     assert.match(list.stdout, /assets\/reader-background\.jpg/);

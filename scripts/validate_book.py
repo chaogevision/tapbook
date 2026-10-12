@@ -15,6 +15,8 @@ from pathlib import Path, PurePosixPath
 
 TOKEN_RE = re.compile(r"[^\W_]+(?:[’'][^\W_]+)*(?:-[^\W_]+)*", re.UNICODE)
 EDGE_PUNCTUATION = "\"'“”‘’.,!?;:()[]{}<>—–…"
+MIN_TOUCH_TARGET_PX = 44
+REFERENCE_DISPLAY_WIDTHS = (320, 600, 900)
 
 
 def clean_token(text: str) -> str:
@@ -60,6 +62,64 @@ def valid_box(box) -> bool:
     return x >= 0 and y >= 0 and width > 0 and height > 0 and x + width <= 1.000001 and y + height <= 1.000001
 
 
+def image_dimensions(image_path: Path) -> tuple[int, int] | None:
+    """Read dimensions for the JPEG/PNG pages produced or accepted by TapBook."""
+    try:
+        with image_path.open("rb") as handle:
+            header = handle.read(26)
+            if header.startswith(b"\x89PNG\r\n\x1a\n") and len(header) >= 24:
+                width = int.from_bytes(header[16:20], "big")
+                height = int.from_bytes(header[20:24], "big")
+                return (width, height) if width > 0 and height > 0 else None
+            if not header.startswith(b"\xff\xd8"):
+                return None
+            handle.seek(2)
+            sof_markers = {0xC0, 0xC1, 0xC2, 0xC3, 0xC5, 0xC6, 0xC7, 0xC9, 0xCA, 0xCB, 0xCD, 0xCE, 0xCF}
+            while True:
+                prefix = handle.read(1)
+                if not prefix:
+                    return None
+                if prefix != b"\xff":
+                    continue
+                marker_data = handle.read(1)
+                while marker_data == b"\xff":
+                    marker_data = handle.read(1)
+                if not marker_data:
+                    return None
+                marker = marker_data[0]
+                if marker in {0xD8, 0xD9, 0x01} or 0xD0 <= marker <= 0xD7:
+                    continue
+                segment_length_data = handle.read(2)
+                if len(segment_length_data) != 2:
+                    return None
+                segment_length = int.from_bytes(segment_length_data, "big")
+                if segment_length < 2:
+                    return None
+                if marker in sof_markers:
+                    dimensions = handle.read(5)
+                    if len(dimensions) != 5:
+                        return None
+                    height = int.from_bytes(dimensions[1:3], "big")
+                    width = int.from_bytes(dimensions[3:5], "big")
+                    return (width, height) if width > 0 and height > 0 else None
+                handle.seek(segment_length - 2, os.SEEK_CUR)
+    except OSError:
+        return None
+
+
+def dimensions_from_manifest(render_manifest: dict, source_page: int) -> tuple[int, int] | None:
+    pages = render_manifest.get("pages", []) if isinstance(render_manifest, dict) else []
+    for item in pages if isinstance(pages, list) else []:
+        if not isinstance(item, dict) or item.get("sourcePdfPage") != source_page:
+            continue
+        try:
+            width, height = int(item.get("width", 0)), int(item.get("height", 0))
+        except (TypeError, ValueError):
+            return None
+        return (width, height) if width > 0 and height > 0 else None
+    return None
+
+
 def read_json(path: Path):
     try:
         return json.loads(path.read_text(encoding="utf-8"))
@@ -78,7 +138,14 @@ def validate_book(book_path: Path, root: Path) -> dict:
         "warnings": [],
         "lowConfidenceTexts": [],
         "unreferencedAssets": [],
-        "checks": {"pageCount": False, "images": False, "translations": False, "sentenceTranslations": False, "words": False, "audio": False, "pageReview": False, "theme": False, "themeBackground": False, "layout": False},
+        "checks": {"pageCount": False, "images": False, "translations": False, "sentenceTranslations": False, "words": False, "audio": False, "pageReview": False, "theme": False, "themeBackground": False, "layout": False, "touchTargets": False},
+        "touchTargetAudit": {
+            "minimumCssPixels": MIN_TOUCH_TARGET_PX,
+            "referenceDisplayWidths": list(REFERENCE_DISPLAY_WIDTHS),
+            "wordCount": 0,
+            "wordsNeedingExpansion": [0 for _ in REFERENCE_DISPLAY_WIDTHS],
+            "pageImagesWithKnownDimensions": 0,
+        },
     }
     errors = report["errors"]
     warnings = report["warnings"]
@@ -147,6 +214,17 @@ def validate_book(book_path: Path, root: Path) -> dict:
     report["pageCount"] = len(pages)
     source_language = str(book.get("sourceLanguage", "")).casefold()
     english_source = source_language.startswith("en") or source_language == "english"
+    render_manifest_path = root / "render-manifest.json"
+    render_manifest = {}
+    render_manifest_exists = render_manifest_path.is_file()
+    if render_manifest_exists:
+        try:
+            render_manifest = read_json(render_manifest_path)
+        except ValueError as exc:
+            errors.append({"code": "invalid_render_manifest", "message": str(exc)})
+    touch_targets_ok = True
+    touch_words_by_page: dict[int, list[str]] = {}
+    image_dimensions_checked: set[int] = set()
     page_images_ok = True
     translations_ok = True
     sentence_translations_ok = True
@@ -184,6 +262,12 @@ def validate_book(book_path: Path, root: Path) -> dict:
         elif relative_image:
             referenced.add(relative_image)
 
+        page_dimensions = dimensions_from_manifest(render_manifest, source_page) if isinstance(source_page, int) else None
+        if page_dimensions is None and image is not None and image.is_file():
+            page_dimensions = image_dimensions(image)
+        if page_dimensions:
+            image_dimensions_checked.add(page_number)
+
         if page.get("reviewStatus") != "verified":
             review_ok = False
             errors.append({"code": "ocr_needs_review", "page": page_number, "message": "page must be visually verified before publishing"})
@@ -213,6 +297,18 @@ def validate_book(book_path: Path, root: Path) -> dict:
             errors.append({"code": "invalid_words", "page": page_number, "message": "words must be an array"})
             page_words = []
             words_ok = False
+        if page_words and not page_dimensions:
+            touch_targets_ok = False
+            errors.append({"code": "missing_touch_target_geometry", "page": page_number, "message": "word boxes need a readable page image dimension to verify device-sized touch targets"})
+        elif page_words and page_dimensions:
+            image_width, image_height = page_dimensions
+            short_reference_widths = [
+                width for width in REFERENCE_DISPLAY_WIDTHS
+                if width * image_height / image_width < MIN_TOUCH_TARGET_PX
+            ]
+            if short_reference_widths:
+                touch_targets_ok = False
+                errors.append({"code": "page_too_short_for_touch_targets", "page": page_number, "message": f"the page aspect ratio leaves less than {MIN_TOUCH_TARGET_PX} CSS px of height at reference widths {short_reference_widths}"})
         text_word_tokens = text_tokens(en_text)
         written_word_tokens = [clean_token(str(word.get("text", ""))) for word in page_words if isinstance(word, dict)]
         if text_word_tokens != written_word_tokens:
@@ -253,6 +349,7 @@ def validate_book(book_path: Path, root: Path) -> dict:
             sentence_translations_ok = False
             errors.append({"code": "unexpected_sentence_translations", "page": page_number, "message": "pages without English text must not define English sentence translations"})
 
+        page_word_centers = []
         for word_index, word in enumerate(page_words, start=1):
             if not isinstance(word, dict):
                 words_ok = False
@@ -265,7 +362,27 @@ def validate_book(book_path: Path, root: Path) -> dict:
                     errors.append({"code": code, "page": page_number, "message": f"word {word_index} needs {field}"})
             if not valid_box(word.get("box")):
                 words_ok = False
+                touch_targets_ok = False
                 errors.append({"code": "invalid_word_box", "page": page_number, "message": f"word {word_index} bounds are outside the normalized page"})
+            elif page_dimensions:
+                report["touchTargetAudit"]["wordCount"] += 1
+                image_width, image_height = page_dimensions
+                page_word_centers.append({
+                    "index": word_index,
+                    "text": str(word.get("text", "")),
+                    "x": float(word["box"]["x"]) + float(word["box"]["w"]) / 2,
+                    "y": float(word["box"]["y"]) + float(word["box"]["h"]) / 2,
+                })
+                compact_at_widths = []
+                for width_index, display_width in enumerate(REFERENCE_DISPLAY_WIDTHS):
+                    display_height = display_width * image_height / image_width
+                    source_width = float(word["box"]["w"]) * display_width
+                    source_height = float(word["box"]["h"]) * display_height
+                    if source_width < MIN_TOUCH_TARGET_PX or source_height < MIN_TOUCH_TARGET_PX:
+                        report["touchTargetAudit"]["wordsNeedingExpansion"][width_index] += 1
+                        compact_at_widths.append(display_width)
+                if compact_at_widths:
+                    touch_words_by_page.setdefault(page_number, []).append(str(word.get("text", "")))
             audio, relative_audio = asset_path(root, word.get("audio"), errors, "missing_word_audio", page_number)
             if audio is None or not audio.is_file() or audio.stat().st_size == 0:
                 audio_ok = False
@@ -285,6 +402,24 @@ def validate_book(book_path: Path, root: Path) -> dict:
                 elif relative_audio:
                     referenced.add(relative_audio)
                     referenced_audio.append((relative_audio, page_number))
+
+        if page_dimensions and len(page_word_centers) > 1:
+            image_width, image_height = page_dimensions
+            reference_width = REFERENCE_DISPLAY_WIDTHS[0]
+            reference_height = reference_width * image_height / image_width
+            for left_index, left in enumerate(page_word_centers):
+                for right in page_word_centers[left_index + 1:]:
+                    distance = math.hypot(
+                        (left["x"] - right["x"]) * reference_width,
+                        (left["y"] - right["y"]) * reference_height,
+                    )
+                    if distance < 0.5:
+                        touch_targets_ok = False
+                        errors.append({
+                            "code": "ambiguous_word_hotspots",
+                            "page": page_number,
+                            "message": f"word {left['index']} ({left['text']}) and word {right['index']} ({right['text']}) have indistinguishable centers, so touch input cannot select between them",
+                        })
 
         timings = page.get("wordTimings", [])
         if not isinstance(timings, list):
@@ -316,15 +451,13 @@ def validate_book(book_path: Path, root: Path) -> dict:
     if source_pages and source_pages != sorted(source_pages):
         errors.append({"code": "source_page_order_mismatch", "message": "pages must remain in source PDF order"})
 
-    render_manifest_path = root / "render-manifest.json"
-    if render_manifest_path.is_file():
+    if render_manifest_exists and render_manifest:
         try:
-            render_manifest = read_json(render_manifest_path)
             expected = int(render_manifest.get("pageCount", 0))
             report["checks"]["pageCount"] = expected == len(pages)
             if expected != len(pages):
                 errors.append({"code": "page_count_mismatch", "message": f"PDF has {expected} pages but book has {len(pages)}"})
-        except (ValueError, TypeError):
+        except (AttributeError, TypeError, ValueError):
             errors.append({"code": "invalid_render_manifest", "message": "render-manifest.json is invalid"})
     else:
         report["checks"]["pageCount"] = bool(pages)
@@ -362,6 +495,16 @@ def validate_book(book_path: Path, root: Path) -> dict:
                         report["unreferencedAssets"].append(relative)
                         warnings.append({"code": "unreferenced_asset", "message": relative})
 
+    for page_number, compact_words in touch_words_by_page.items():
+        samples = compact_words[:5]
+        warnings.append({
+            "code": "small_printed_word_boxes",
+            "page": page_number,
+            "message": f"{len(compact_words)} printed word boxes fall below {MIN_TOUCH_TARGET_PX} CSS px at one or more reference display widths; the reader expands their tap targets and resolves overlap by nearest word center.",
+            "sampleWords": samples,
+        })
+    report["touchTargetAudit"]["pageImagesWithKnownDimensions"] = len(image_dimensions_checked)
+
     report["checks"].update({
         "images": page_images_ok,
         "translations": translations_ok,
@@ -372,6 +515,7 @@ def validate_book(book_path: Path, root: Path) -> dict:
         "theme": theme_ok,
         "themeBackground": theme_background_ok,
         "layout": layout_ok,
+        "touchTargets": touch_targets_ok,
     })
     if not errors:
         report["status"] = "passed"

@@ -26,7 +26,9 @@
 - [ ] Each English story page has a Chinese translation unless the source already provides one.
 - [ ] Every English token belongs to one ordered sentence range with a matching Chinese translation.
 - [ ] Every English body word has a hotspot aligned to the printed word on its source page; tapping it speaks that word and shows its contextual Chinese meaning in the bottom dock.
-- [ ] Image hotspots align with their printed words at phone portrait and tablet landscape sizes.
+- [ ] Each printed word has at least a 44×44 CSS-pixel touch target when its source box is smaller; visible highlighting stays on the source box.
+- [ ] When adjacent touch targets overlap, tapping each side of the shared area selects the nearest printed word; keyboard and assistive-technology activation still select the focused word.
+- [ ] Image hotspots align with their printed words at phone portrait and tablet landscape sizes; explicitly tap short words and adjacent words on both sides.
 - [ ] English narration highlights the matching word on the original page and updates the bottom dock to that sentence's translation.
 - [ ] Word meanings, sentence playback, and sentence translation appear in the bottom dock; no right transcript sidebar appears.
 - [ ] Sentence playback uses the matching audio range; previous/next sentence controls follow the page's reading order.
@@ -43,6 +45,7 @@
 - [ ] All images, scripts, styles, and audio resolve from local relative paths.
 - [ ] The ZIP excludes the original PDF and includes only the rendered pages and generated book assets.
 - [ ] `qa-report.json` says `passed` and contains no blocking errors.
+- [ ] Review `touchTargetAudit` and any `small_printed_word_boxes` warnings; confirm short printed boxes are covered by the reader's expanded touch targets.
 
 ## Devices and accessibility
 
