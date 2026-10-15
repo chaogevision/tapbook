@@ -78,7 +78,10 @@ git clone https://github.com/chaogevision/tapbook.git .agents/skills/tapbook
 python3 -m venv .venv-tapbook
 source .venv-tapbook/bin/activate
 python -m pip install -r .agents/skills/tapbook/requirements.txt
+python -c 'from importlib.metadata import version; print(version("edge-tts"))'
 ```
+
+TapBook 固定使用 `edge-tts==7.3.1`。复用旧 Python 环境时重新安装 requirements，并确认上面的版本输出为 `7.3.1`。
 
 PDF 渲染和文字识别还需要 Poppler 与 Tesseract：
 
