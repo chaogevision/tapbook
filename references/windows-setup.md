@@ -46,7 +46,8 @@ Audio generation contacts the online Edge TTS service. Test it from the same Pow
 ```powershell
 $edgeTts = (Resolve-Path .venv-tapbook\Scripts\edge-tts.exe).Path
 & $edgeTts --list-voices
-& $edgeTts --voice en-US-AriaNeural --text "Hello, world." --write-media "$env:TEMP\tapbook-tts-smoke.mp3"
+& $edgeTts --voice "<English voice from --list-voices>" --text "Hello, world." --write-media "$env:TEMP\tapbook-tts-smoke-en.mp3"
+& $edgeTts --voice "<Chinese voice from --list-voices>" --text "你好，欢迎使用。" --write-media "$env:TEMP\tapbook-tts-smoke-zh.mp3"
 ```
 
 Replace both voice placeholders with names returned by `--list-voices`; run both short tests to verify English and Chinese synthesis. A failed request is a network/service result, separate from Poppler or OCR setup. It does not by itself prove that every mainland network needs a VPN. Do not mark audio generation complete unless TapBook produced the required audio and timings. The finished reader plays its packaged local MP3 files and does not need TTS access while reading.
