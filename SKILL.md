@@ -13,7 +13,7 @@ Read [the theme and layout guide](references/theme-and-layout-guide.md) before c
 
 1. Read the user's exact scope and any provided sample archive. Keep the original PDF and all book-specific media outside this Skill directory.
 2. Ask only about information that cannot be safely inferred. Otherwise list available voices and choose a natural voice for each language.
-3. Check Python, Poppler (`pdftoppm`, `pdfinfo`, `pdftotext`), Tesseract, and the `edge-tts` package. If a tool is missing, give the install command from `README.md`; do not silently skip rendering, OCR, or audio. Check the exact Python environment used for audio generation and require `edge-tts==7.3.1`; older releases use a handshake protocol that may be rejected with HTTP 403. If the version differs, run `python -m pip install -r "$SKILL_DIR/requirements.txt"` with that same interpreter, then verify the version again.
+3. Check Python, Poppler (`pdftoppm`, `pdfinfo`, `pdftotext`), Tesseract, and the `edge-tts` package. If a tool is missing, give the install command from `README.md`; do not silently skip rendering, OCR, or audio. Check the exact Python environment used for audio generation and require `edge-tts==7.3.1`; older releases use a handshake protocol that may be rejected with HTTP 403. If the version differs, run `python -m pip install -r "$SKILL_DIR/requirements.txt"` with that same interpreter, then verify the version again. On Windows, first read [the Windows setup and verification guide](references/windows-setup.md), use its PowerShell commands, and verify `Get-Command pdfinfo, pdftoppm, pdftotext, tesseract` before processing; do not give Bash activation commands as Windows instructions.
 
 ## Build workflow
 
@@ -45,7 +45,7 @@ Read [the theme and layout guide](references/theme-and-layout-guide.md) before c
 
 Set `SKILL_DIR` to the installed `tapbook` folder and run from the project root with the Python interpreter where `edge-tts` is installed:
 
-Before audio generation, confirm this interpreter reports `7.3.1` with `python -c 'from importlib.metadata import version; print(version("edge-tts"))'`.
+Before audio generation, confirm this interpreter reports `7.3.1` with `python -c 'from importlib.metadata import version; print(version("edge-tts"))'`. On Windows PowerShell, follow [the Windows command sequence](references/windows-setup.md) and invoke `Scripts\\python.exe` directly instead of using the Bash `source` command.
 
 ```bash
 python "$SKILL_DIR/scripts/render_pdf.py" input.pdf --output-dir work/book --dpi 150 --ocr-lang eng
