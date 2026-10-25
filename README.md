@@ -96,6 +96,10 @@ brew install poppler tesseract
 ```bash
 sudo apt install poppler-utils tesseract-ocr tesseract-ocr-eng
 ```
+**Windows 10/11 (PowerShell)**
+
+Follow the [Windows setup and verification guide](references/windows-setup.md) for PowerShell commands, Python environment setup, Poppler/Tesseract installation and `PATH` checks, an Edge TTS connectivity smoke test, and the end-to-end reader check. Install English Tesseract data (`eng`) for the default workflow. Invoke the virtual environment's `Scripts\\python.exe` directly; no PowerShell activation-policy change is needed.
+
 
 安装后刷新或重启 Agent 会话，让它发现 `$tapbook`。不同 Agent 的 Skill 目录可能不同；也可以把整个仓库放进该 Agent 支持的 Skills 目录。不要只复制 `SKILL.md`：阅读器、脚本、背景图和校验规则也都在仓库中。
 
