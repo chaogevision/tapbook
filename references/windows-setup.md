@@ -4,20 +4,23 @@ Use these steps in Windows PowerShell from the project root. The commands use th
 
 ## Install the Skill and Python dependency
 
-Install Git and Python 3.11 or newer. In PowerShell:
+Install [Git for Windows](https://git-scm.com/download/win) and Python 3.11 or newer. In PowerShell, confirm Git and Python are available:
 
 ```powershell
+git --version
+py -3 --version
 New-Item -ItemType Directory -Force .agents | Out-Null
 New-Item -ItemType Directory -Force .agents\skills | Out-Null
 git clone https://github.com/chaogevision/tapbook.git .agents\skills\tapbook
 
-py -3.11 -m venv .venv-tapbook
+py -3 -m venv .venv-tapbook
 $python = (Resolve-Path .venv-tapbook\Scripts\python.exe).Path
+& $python -c "import sys; assert sys.version_info >= (3, 11), 'TapBook requires Python 3.11+'; print(sys.version)"
 & $python -m pip install -r .agents\skills\tapbook\requirements.txt
 & $python -c "from importlib.metadata import version; print(version('edge-tts'))"
 ```
 
-The final command must print `7.3.1`. If PowerShell cannot find `py`, install Python from [python.org](https://www.python.org/downloads/windows/) and reopen the terminal.
+The final command must print `7.3.1`. If PowerShell cannot find `py`, install Python from [python.org](https://www.python.org/downloads/windows/) and reopen the terminal. If `py -3` selects Python earlier than 3.11, install a newer version or select an installed one explicitly, for example `py -3.11`.
 
 ## Install Poppler and Tesseract
 
@@ -25,7 +28,7 @@ TapBook calls the Poppler commands `pdfinfo`, `pdftoppm`, and `pdftotext`, plus 
 
 1. The Tesseract installation guide points Windows users to third-party builds from UB Mannheim. Install one using the [Tesseract installation guide](https://tesseract-ocr.github.io/tessdoc/Installation.html). Select the English language data (`eng`) during setup. For PDFs in another language, install its Tesseract language data too.
 2. Download a Windows Poppler build from [poppler-windows releases](https://github.com/oschwartz10612/poppler-windows/releases/latest), extract it, and add the directory containing `pdfinfo.exe`, `pdftoppm.exe`, and `pdftotext.exe` to your user `PATH`.
-3. Ensure the directory containing `tesseract.exe` is on `PATH`. Restart PowerShell and WorkBuddy/Codex after changing `PATH`.
+3. Ensure the directory containing `tesseract.exe` is on `PATH`. To add either tool folder, open **Edit environment variables for your account**, edit the user `Path`, add the folder containing the executable, and save. Restart PowerShell and the agent app (WorkBuddy/Codex) after changing `PATH`.
 
 Check that all commands are discoverable and that the required OCR language is installed:
 
@@ -46,7 +49,7 @@ $edgeTts = (Resolve-Path .venv-tapbook\Scripts\edge-tts.exe).Path
 & $edgeTts --voice en-US-AriaNeural --text "Hello, world." --write-media "$env:TEMP\tapbook-tts-smoke.mp3"
 ```
 
-If that voice is unavailable, use a name returned by `--list-voices`. A failed request is a network/service result, separate from Poppler or OCR setup. It does not by itself prove that every mainland network needs a VPN. Do not mark audio generation complete unless TapBook produced the required audio and timings. The finished reader plays its packaged local MP3 files and does not need TTS access while reading.
+Replace both voice placeholders with names returned by `--list-voices`; run both short tests to verify English and Chinese synthesis. A failed request is a network/service result, separate from Poppler or OCR setup. It does not by itself prove that every mainland network needs a VPN. Do not mark audio generation complete unless TapBook produced the required audio and timings. The finished reader plays its packaged local MP3 files and does not need TTS access while reading.
 
 ## Run the TapBook build
 
@@ -71,13 +74,13 @@ Replace both voice placeholders with actual names from the voice lists. Inspect 
 
 ## Verify the packaged reader
 
-Extract the ZIP, then open the extracted root `index.html` in Edge:
+Extract the ZIP and open the extracted root `index.html` in a browser. The command opens the Windows default browser; if that is not Edge, open the file from Edge with Ctrl+O:
 
 ```powershell
 Expand-Archive ".\output\book.zip" -DestinationPath ".\output\book-extracted"
 Start-Process ".\output\book-extracted\index.html"
 ```
 
-Confirm a page image loads, a tapped English word plays its local clip, sentence/page narration plays, page navigation works, and themes can be changed. Repeat once with a source PDF and output folder whose paths contain spaces or Chinese characters.
+Follow the full reader QA in `SKILL.md`, including phone/tablet/iPad layouts and extracted `file://` use. At minimum, confirm a page image loads, tap short and adjacent words in both orders, verify word and sentence audio, playback speed, page navigation, bilingual English-then-Chinese playback, and theme switching. Repeat once with source and output paths containing spaces or Chinese characters.
 
 This guide documents the Windows workflow; it is not evidence of a completed native Windows test. Record Windows and PowerShell versions, tool versions, and any failing command when reporting a Windows run.
