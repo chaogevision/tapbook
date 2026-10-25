@@ -7,6 +7,7 @@ Use these steps in Windows PowerShell from the project root. The commands use th
 Install Git and Python 3.11 or newer. In PowerShell:
 
 ```powershell
+New-Item -ItemType Directory -Force .agents | Out-Null
 New-Item -ItemType Directory -Force .agents\skills | Out-Null
 git clone https://github.com/chaogevision/tapbook.git .agents\skills\tapbook
 
@@ -22,7 +23,7 @@ The final command must print `7.3.1`. If PowerShell cannot find `py`, install Py
 
 TapBook calls the Poppler commands `pdfinfo`, `pdftoppm`, and `pdftotext`, plus the Tesseract command `tesseract`. Install both tools separately from Python:
 
-1. Install Tesseract using the Windows build linked by the [Tesseract installation guide](https://tesseract-ocr.github.io/tessdoc/Installation.html). Select the English language data (`eng`) during setup. For PDFs in another language, install its Tesseract language data too.
+1. The Tesseract installation guide points Windows users to third-party builds from UB Mannheim. Install one using the [Tesseract installation guide](https://tesseract-ocr.github.io/tessdoc/Installation.html). Select the English language data (`eng`) during setup. For PDFs in another language, install its Tesseract language data too.
 2. Download a Windows Poppler build from [poppler-windows releases](https://github.com/oschwartz10612/poppler-windows/releases/latest), extract it, and add the directory containing `pdfinfo.exe`, `pdftoppm.exe`, and `pdftotext.exe` to your user `PATH`.
 3. Ensure the directory containing `tesseract.exe` is on `PATH`. Restart PowerShell and WorkBuddy/Codex after changing `PATH`.
 
