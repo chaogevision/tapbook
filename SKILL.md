@@ -45,7 +45,7 @@ Read [the theme and layout guide](references/theme-and-layout-guide.md) before c
 
 Set `SKILL_DIR` to the installed `tapbook` folder and run from the project root with the Python interpreter where `edge-tts` is installed:
 
-Before audio generation, confirm this interpreter reports `7.3.1` with `python -c 'from importlib.metadata import version; print(version("edge-tts"))'`. On Windows PowerShell, follow [the Windows command sequence](references/windows-setup.md) and invoke `Scripts\\python.exe` directly instead of using the Bash `source` command.
+Before audio generation, confirm this interpreter reports `7.3.1` with `python -c 'from importlib.metadata import version; print(version("edge-tts"))'`. On Windows PowerShell, follow [the Windows command sequence](references/windows-setup.md) and invoke `Scripts\python.exe` directly instead of using the Bash `source` command.
 
 ```bash
 python "$SKILL_DIR/scripts/render_pdf.py" input.pdf --output-dir work/book --dpi 150 --ocr-lang eng
