@@ -49,9 +49,10 @@ If that voice is unavailable, use a name returned by `--list-voices`. A failed r
 
 ## Run the TapBook build
 
-Run these commands from the project root. Keep quotes around paths, especially paths containing spaces or Chinese characters:
+Run these commands from the project root. Keep quotes around paths, especially paths containing spaces or Chinese characters. Recreate these variables if you opened a new PowerShell session:
 
 ```powershell
+$python = (Resolve-Path .venv-tapbook\Scripts\python.exe).Path
 $skill = (Resolve-Path .agents\skills\tapbook).Path
 
 & $python "$skill\scripts\generate_audio.py" voices --locale en-US
