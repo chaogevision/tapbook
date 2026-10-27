@@ -65,6 +65,8 @@ TapBook 附带 9 套可离线切换的主题背景。每套都包含横屏和竖
 
 ## 安装
 
+**Windows 10/11 用户：**请直接使用 [Windows PowerShell 安装与验收指南](references/windows-setup.md)。下面的 Bash 安装命令适用于 macOS 和 Linux。
+
 先把仓库克隆到你使用的 Agent 能识别的 Skill 目录。以下示例使用项目级 `.agents/skills/`：
 
 ```bash
@@ -96,6 +98,10 @@ brew install poppler tesseract
 ```bash
 sudo apt install poppler-utils tesseract-ocr tesseract-ocr-eng
 ```
+**Windows 10/11 (PowerShell)**
+
+Follow the [Windows setup and verification guide](references/windows-setup.md) for PowerShell commands, Python environment setup, Poppler/Tesseract installation and `PATH` checks, an Edge TTS connectivity smoke test, and the end-to-end reader check. Install English Tesseract data (`eng`) for the default workflow. Invoke the virtual environment's `Scripts\python.exe` directly; no PowerShell activation-policy change is needed.
+
 
 安装后刷新或重启 Agent 会话，让它发现 `$tapbook`。不同 Agent 的 Skill 目录可能不同；也可以把整个仓库放进该 Agent 支持的 Skills 目录。不要只复制 `SKILL.md`：阅读器、脚本、背景图和校验规则也都在仓库中。
 
