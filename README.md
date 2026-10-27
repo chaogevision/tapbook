@@ -65,6 +65,8 @@ TapBook 附带 9 套可离线切换的主题背景。每套都包含横屏和竖
 
 ## 安装
 
+**Windows 10/11 用户：**请直接使用 [Windows PowerShell 安装与验收指南](references/windows-setup.md)。下面的 Bash 安装命令适用于 macOS 和 Linux。
+
 先把仓库克隆到你使用的 Agent 能识别的 Skill 目录。以下示例使用项目级 `.agents/skills/`：
 
 ```bash
