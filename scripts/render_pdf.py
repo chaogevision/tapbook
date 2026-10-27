@@ -21,15 +21,19 @@ class ToolError(RuntimeError):
 
 def run_tool(command: list[str], *, timeout: int = 120) -> subprocess.CompletedProcess[str]:
     try:
-        result = subprocess.run(command, capture_output=True, text=True, timeout=timeout, check=False)
+        result = subprocess.run(command, capture_output=True, timeout=timeout, check=False)
     except FileNotFoundError as exc:
         raise ToolError(f"required tool not found: {command[0]}") from exc
     except subprocess.TimeoutExpired as exc:
         raise ToolError(f"tool timed out after {timeout}s: {command[0]}") from exc
     if result.returncode != 0:
-        detail = (result.stderr or result.stdout).strip()
+        detail = (result.stderr or result.stdout).decode("utf-8", errors="replace").strip()
         raise ToolError(f"{command[0]} failed (exit {result.returncode}): {detail[:500]}")
-    return result
+    try:
+        stdout = result.stdout.decode("utf-8")
+    except UnicodeDecodeError as exc:
+        raise ToolError(f"{command[0]} returned invalid UTF-8 output") from exc
+    return subprocess.CompletedProcess(result.args, result.returncode, stdout, result.stderr.decode("utf-8", errors="replace"))
 
 
 def jpeg_dimensions(image_path: Path) -> tuple[int, int]:
@@ -154,7 +158,7 @@ def render(input_pdf: Path, output_dir: Path, dpi: int = 150, ocr_lang: str = "e
             raise ToolError(f"pdftoppm did not create page {page_number}")
         image_width, image_height = jpeg_dimensions(image_path)
 
-        extracted = run_tool(["pdftotext", "-f", str(page_number), "-l", str(page_number), "-layout", str(input_pdf), "-"])
+        extracted = run_tool(["pdftotext", "-enc", "UTF-8", "-f", str(page_number), "-l", str(page_number), "-layout", str(input_pdf), "-"])
         text_path = text_dir / f"{page_id}.txt"
         text_path.write_text(extracted.stdout, encoding="utf-8")
 
