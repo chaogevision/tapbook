@@ -14,6 +14,22 @@
 
 </div>
 
+
+## 互动绘本 3.0｜绘本馆与英语机构展示
+
+面向绘本馆和小型英语机构的互动阅读体验。孩子可以翻阅绘本，点击英文单词查看词旁中文释义并听发音，也可以播放中英故事朗读。机构可围绕自己的绘本内容制作阅读材料，并发布链接供学员打开。
+
+[![点击封面观看互动绘本 3.0 演示视频](https://raw.githubusercontent.com/chaogevision/tapbook/interactive-picture-books-3-showcase/media/demo-poster.png)](https://github.com/chaogevision/tapbook/blob/interactive-picture-books-3-showcase/media/interactive-picture-books-3.0-demo.mp4)
+
+| 绘本目录 | 单词点读与词旁释义 |
+| --- | --- |
+| ![绘本目录真实截图](https://raw.githubusercontent.com/chaogevision/tapbook/interactive-picture-books-3-showcase/media/book-shelf.png) | ![单词点读真实截图](https://raw.githubusercontent.com/chaogevision/tapbook/interactive-picture-books-3-showcase/media/word-translation.png) |
+
+**对互动绘本 3.0 感兴趣？联系超哥：微信号 chaogevision。**
+
+演示绘本为 Book Dash 的 *A House for Mouse*；原书授权与素材说明见[3.0 展示页](https://github.com/chaogevision/tapbook/blob/interactive-picture-books-3-showcase/README.md)。
+
+
 ---
 
 ## TapBook 能做什么
